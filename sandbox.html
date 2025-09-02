@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Bitcoin Inscription Content - Open Bitmap Internet</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: auto;
+      background: #fff;
+    }
+    
+    .loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: Arial, sans-serif;
+      color: #666;
+      z-index: 1000;
+      background: rgba(255,255,255,0.9);
+      padding: 20px;
+      border-radius: 4px;
+    }
+    
+    .error {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: Arial, sans-serif;
+      color: #d32f2f;
+      text-align: center;
+      z-index: 1000;
+      max-width: 80%;
+      background: rgba(255,255,255,0.9);
+      padding: 20px;
+      border-radius: 4px;
+      border: 1px solid #d32f2f;
+    }
+    
+    .image-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .image-container img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .obi-watermark {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      font-size: 10px;
+      color: rgba(0,0,0,0.3);
+      pointer-events: none;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading" class="loading">Loading inscription content...</div>
+  <div id="error" class="error" style="display: none;"></div>
+  <div id="content"></div>
+  <div class="obi-watermark">Open Bitmap Internet</div>
+  
+  <script>
+    function hideLoading() {
+      const loading = document.getElementById('loading');
+      if (loading) loading.style.display = 'none';
+    }
+    
+    function showError(message) {
+      hideLoading();
+      const error = document.getElementById('error');
+      error.style.display = 'block';
+      error.textContent = message;
+    }
+    
+    function renderContent() {
+      const params = new URLSearchParams(window.location.search);
+      const type = params.get('type');
+      const inscriptionId = params.get('id');
+      
+      if (!type || !inscriptionId) {
+        showError('Invalid content parameters');
+        return;
+      }
+      
+      console.log('[OBI Sandbox] Requesting content for:', inscriptionId);
+      
+      // Request content from parent window (which has chrome.runtime access)
+      window.parent.postMessage({
+        type: 'REQUEST_CONTENT',
+        inscriptionId: inscriptionId,
+        renderType: type
+      }, '*');
+    }
+    
+    // Listen for content from parent window
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'CONTENT_RESPONSE') {
+        const { status, data, contentType, error, renderType } = event.data;
+        
+        if (status === 'success' && data) {
+          console.log('[OBI Sandbox] Received content, type:', contentType);
+          
+          try {
+            if (renderType === 'image') {
+              renderImage(data, contentType, event.data.inscriptionId);
+            } else if (renderType === 'html') {
+              renderHTML(data, contentType, event.data.inscriptionId);
+            } else {
+              showError('Unknown render type');
+            }
+          } catch (err) {
+            console.error('[OBI Sandbox] Render error:', err);
+            showError('Failed to render content: ' + err.message);
+          }
+        } else {
+          showError('Failed to retrieve content: ' + (error || 'Unknown error'));
+        }
+      }
+    });
+    
+    function renderImage(content, contentType, inscriptionId) {
+      try {
+        hideLoading();
+        
+        // Convert string back to binary for images
+        const binaryString = content;
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: contentType });
+        const imageUrl = URL.createObjectURL(blob);
+        
+        const container = document.createElement('div');
+        container.className = 'image-container';
+        
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.alt = 'Bitcoin Inscription Image';
+        
+        img.onload = () => {
+          console.log('[OBI Sandbox] Image loaded successfully');
+        };
+        
+        img.onerror = () => {
+          showError('Failed to load image');
+        };
+        
+        container.appendChild(img);
+        document.getElementById('content').appendChild(container);
+        
+        // Add inscription ID to page
+        const comment = document.createComment(`Inscription ID: ${inscriptionId}`);
+        document.head.appendChild(comment);
+      } catch (error) {
+        console.error('[OBI Sandbox] Image render error:', error);
+        showError('Failed to render image: ' + error.message);
+      }
+    }
+    
+    function renderHTML(content, contentType, inscriptionId) {
+      try {
+        hideLoading();
+        
+        console.log('[OBI Sandbox] Rendering HTML content, type:', contentType);
+        
+        // Check if it's a full HTML document
+        if (content.trim().match(/^\s*<!DOCTYPE/i) || content.includes('<html')) {
+          // For full documents, replace everything
+          document.open();
+          document.write(content);
+          document.close();
+          
+          // Add watermark and comment to the new document
+          setTimeout(() => {
+            const watermark = document.createElement('div');
+            watermark.className = 'obi-watermark';
+            watermark.textContent = 'Open Bitmap Internet';
+            document.body.appendChild(watermark);
+            
+            const comment = document.createComment(`Inscription ID: ${inscriptionId} - Extension: Open Bitmap Internet`);
+            document.head.appendChild(comment);
+            
+            // Execute scripts in the new document
+            executeAllScripts();
+          }, 100);
+          
+          return;
+        }
+        
+        // Handle HTML fragment
+        const contentDiv = document.getElementById('content');
+        contentDiv.innerHTML = content;
+        
+        // Add inscription ID to page
+        const comment = document.createComment(`Inscription ID: ${inscriptionId}`);
+        document.head.appendChild(comment);
+        
+        // Execute scripts after a delay
+        setTimeout(() => {
+          executeScripts(contentDiv);
+        }, 100);
+      } catch (error) {
+        console.error('[OBI Sandbox] HTML render error:', error);
+        showError('Failed to render HTML: ' + error.message);
+      }
+    }
+    
+    function executeAllScripts() {
+      // Execute all scripts in the document
+      const scripts = document.querySelectorAll('script');
+      executeScriptList(scripts);
+    }
+    
+    function executeScripts(container) {
+      // Execute scripts within a container
+      const scripts = container.querySelectorAll('script');
+      executeScriptList(scripts);
+    }
+    
+    function executeScriptList(scripts) {
+      scripts.forEach(oldScript => {
+        const newScript = document.createElement('script');
+        
+        // Copy attributes
+        Array.from(oldScript.attributes).forEach(attr => {
+          newScript.setAttribute(attr.name, attr.value);
+        });
+        
+        if (oldScript.src) {
+          newScript.src = oldScript.src;
+          newScript.async = false;
+          newScript.onload = () => console.log('[OBI Sandbox] External script loaded:', oldScript.src);
+          newScript.onerror = () => console.warn('[OBI Sandbox] External script failed:', oldScript.src);
+        } else {
+          newScript.textContent = oldScript.textContent;
+        }
+        
+        // Replace old script with new one
+        try {
+          oldScript.parentNode.replaceChild(newScript, oldScript);
+        } catch (e) {
+          console.warn('[OBI Sandbox] Script replacement failed:', e);
+        }
+      });
+    }
+    
+    // Initialize rendering when page loads
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', renderContent);
+    } else {
+      renderContent();
+    }
+    
+    // Notify parent that sandbox is ready
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'SANDBOX_READY' }, '*');
+    }
+  </script>
+</body>
+</html>

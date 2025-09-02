@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Open Bitmap Internet",
+  "version": "1.0",
+  "description": "Redirects .bitmap URLs to the most recent inscription content of the 1st 907k bitmaps.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback",
+    "webNavigation",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://ordinals.com/*"],
+      "js": ["purify.min.js", "content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {},
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "error.html",
+        "redirect.html",
+        "error.js",
+        "redirect.js",
+        "redirect-ui.js",
+        "local.html",
+        "local.js",
+        "sandbox.html"
+      ],
+      "matches": ["<all_urls>", "https://ordinals.com/*"]
+    }
+  ]
+}
+
+

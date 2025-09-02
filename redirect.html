@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Bitmap Redirect</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    
+    .container {
+      text-align: center;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      max-width: 400px;
+      width: 90%;
+    }
+    
+    .logo {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-left: 4px solid #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 1rem auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .status {
+      font-size: 1.1rem;
+      margin: 1rem 0;
+      font-weight: 500;
+    }
+    
+    .query-info {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      font-family: 'Courier New', monospace;
+      word-break: break-all;
+      font-size: 0.9rem;
+    }
+    
+    .progress-steps {
+      text-align: left;
+      margin: 1.5rem 0;
+    }
+    
+    .step {
+      display: flex;
+      align-items: center;
+      margin: 0.5rem 0;
+      font-size: 0.9rem;
+      opacity: 0.6;
+      transition: opacity 0.3s ease;
+    }
+    
+    .step.active {
+      opacity: 1;
+      font-weight: 500;
+    }
+    
+    .step.completed {
+      opacity: 0.8;
+    }
+    
+    .step-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      margin-right: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+    }
+    
+    .step.active .step-icon {
+      background: #4ecdc4;
+      animation: pulse 2s infinite;
+    }
+    
+    .step.completed .step-icon {
+      background: #2ecc71;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    
+    .error {
+      display: none;
+      background: rgba(231, 76, 60, 0.2);
+      border: 1px solid rgba(231, 76, 60, 0.5);
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+    
+    .error.show {
+      display: block;
+    }
+    
+    .retry-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: background 0.3s ease;
+    }
+    
+    .retry-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">? OBI</div>
+    
+    <div class="spinner" id="spinner"></div>
+    
+    <div class="status" id="status">Redirecting...</div>
+    
+    <div class="query-info" id="queryInfo" style="display: none;"></div>
+    
+    <div class="progress-steps" id="progressSteps">
+      <div class="step" id="step1">
+        <div class="step-icon">1</div>
+        <span>Parsing query</span>
+      </div>
+      <div class="step" id="step2">
+        <div class="step-icon">2</div>
+        <span>Checking registry</span>
+      </div>
+      <div class="step" id="step3">
+        <div class="step-icon">3</div>
+        <span>Resolving inscription</span>
+      </div>
+      <div class="step" id="step4">
+        <div class="step-icon">4</div>
+        <span>Redirecting</span>
+      </div>
+    </div>
+    
+    <div class="error" id="error">
+      <div id="errorMessage"></div>
+      <button class="retry-btn" type="button">Retry</button>
+    </div>
+  </div>
+  
+  <!-- Security-compliant external scripts -->
+  <script src="redirect-ui.js"></script>
+  <script src="redirect.js"></script>
+</body>
+</html>
