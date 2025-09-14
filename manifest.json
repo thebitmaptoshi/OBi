@@ -1,15 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "Open Bitmap Internet",
-  "version": "1.0",
+  "name": "Open Bitmap internet",
+  "version": "1.1",
   "description": "Redirects .bitmap URLs to the most recent inscription content of the 1st 907k bitmaps.",
   "permissions": [
     "activeTab",
     "scripting",
     "declarativeNetRequest",
     "declarativeNetRequestFeedback",
-    "webNavigation",
-    "storage"
+    "webNavigation"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -23,7 +22,20 @@
   "background": {
     "service_worker": "background.js"
   },
-  "action": {},
+  "action": {
+    "default_icon": {
+      "16": "OBi.png",
+      "32": "OBi.png",
+      "48": "OBi.png",
+      "128": "OBi.png"
+    }
+  },
+  "icons": {
+    "16": "OBi.png",
+    "32": "OBi.png",
+    "48": "OBi.png",
+    "128": "OBi.png"
+  },
   "web_accessible_resources": [
     {
       "resources": [
@@ -34,7 +46,10 @@
         "redirect-ui.js",
         "local.html",
         "local.js",
-        "sandbox.html"
+        "sandbox.html",
+        "oci.js",
+        "fail.html",
+        "fail.js"
       ],
       "matches": ["<all_urls>", "https://ordinals.com/*"]
     }

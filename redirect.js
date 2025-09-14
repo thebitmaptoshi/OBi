@@ -1,81 +1,43 @@
-﻿const REGISTRY_BASE_URL = 'https://raw.githubusercontent.com/thebitmaptoshi/BNS/main/Registry/';
+﻿// Remove REGISTRY_BASE_URL and batch file logic for numeric addresses
 
 // CRITICAL: Prevent infinite loops by tracking redirects
 function checkRedirectLoop() {
   const currentTime = Date.now();
-  const lastRedirect = sessionStorage.getItem('obi_last_redirect');
   const lastRedirectTime = sessionStorage.getItem('obi_last_redirect_time');
-  
-  // If we redirected recently (within 5 seconds), it's likely a loop
-  if (lastRedirectTime && (currentTime - parseInt(lastRedirectTime)) < 5000) {
-    console.log('[OBI Redirect] Loop detected, blocking redirect');
-    if (window.OBI_UI) {
-      window.OBI_UI.showError('Redirect loop detected - blocking to prevent infinite redirection');
-      setTimeout(() => window.location.href = 'about:blank', 2000);
-    } else {
-      window.location.href = 'about:blank';
-    }
-    return true; // Loop detected
+  if (lastRedirectTime && (currentTime - parseInt(lastRedirectTime)) < 1000) {
+    // Instead of about:blank, go to error.html with query
+    const lastQuery = sessionStorage.getItem('obi_last_query') || '';
+    window.location.href = chrome.runtime.getURL(`error.html?query=${encodeURIComponent(lastQuery)}`);
+    return true;
   }
-  
-  // Store this redirect attempt
-  sessionStorage.setItem('obi_last_redirect', window.location.href);
   sessionStorage.setItem('obi_last_redirect_time', currentTime.toString());
-  return false; // No loop
+  return false;
 }
 
-// Function to open local content tab (back to original approach)
-function openLocalContentTab(inscriptionId) {
-  const localUrl = chrome.runtime.getURL(`local.html?inscriptionId=${inscriptionId}`);
-  window.open(localUrl, '_blank');
-  console.log('[OBI Redirect] Opened local content tab for inscription:', inscriptionId);
-}
-
-// Function to sanitize query
 function sanitizeQuery(query) {
-  // Allow a-z, A-Z, 0-9, period, dash, underscore, exclamation, equals
   return query.replace(/[^a-zA-Z0-9.\-_=!]/g, '').toLowerCase();
 }
 
-// Function to determine if query is likely an address (only # or #.# allowed)
 function isAddress(query) {
-  // Matches a single number (e.g., 123) or number.number (e.g., 123.456)
   return /^\d+(\.\d+)?$/.test(query);
 }
 
-// Function to get the correct index file for a name
-function getIndexFileForName(name) {
-  const firstChar = name[0].toUpperCase();
-  if (/\d/.test(firstChar)) {
-    return 'index_0-9.txt';
-  }
-  return `index_${firstChar}.txt`;
-}
-
-// Function to get the correct batch file for an address
-function getBatchFileForAddress(address) {
-  const num = parseInt(address, 10);
-  const start = Math.floor(num / 10000) * 10000;
-  const end = start + 9999;
-  return `${start}-${end}.txt`;
-}
-
-// Function to fetch and parse the index file for a name
+// Name-to-address lookup (BNS registry)
 async function fetchAddressForName(name) {
-  const indexFile = getIndexFileForName(name);
+  const REGISTRY_BASE_URL = 'https://raw.githubusercontent.com/thebitmaptoshi/BNS/main/Registry/';
+  const firstChar = name[0].toUpperCase();
+  const indexFile = /\d/.test(firstChar) ? 'index_0-9.txt' : `index_${firstChar}.txt`;
   const url = `${REGISTRY_BASE_URL}${indexFile}`;
   try {
     if (window.OBI_UI) {
       window.OBI_UI.setStep(2);
       window.OBI_UI.setStatus(`Looking up name "${name}" in registry...`);
     }
-    
     const response = await fetch(url);
     if (!response.ok) {
       return null;
     }
     const text = await response.text();
-    // Entries are (name,address), separated by commas
     const entries = text.match(/\([^\)]+\)/g) || [];
     const sanitizedInput = sanitizeQuery(name);
     for (const entry of entries) {
@@ -95,84 +57,57 @@ async function fetchAddressForName(name) {
   }
 }
 
-// Function to fetch inscriptionId for an address
-async function fetchInscriptionIdForAddress(address) {
-  const batchFile = getBatchFileForAddress(address);
-  const url = `${REGISTRY_BASE_URL}${batchFile}`;
+// Round-robin redirect sites for isBitmap = false
+const REDIRECT_SITES = [
+  'https://ordinals.com/content/',
+  'https://ordiscan.com/content/',
+  'https://static.unisat.io/preview/'
+];
+function getNextRedirectSite() {
+  let idx = parseInt(localStorage.getItem('obi_redirect_site_index') || '0', 10);
+  const site = REDIRECT_SITES[idx];
+  idx = (idx + 1) % REDIRECT_SITES.length;
+  localStorage.setItem('obi_redirect_site_index', idx.toString());
+  // Log to service worker
   try {
-    if (window.OBI_UI) {
-      window.OBI_UI.setStep(3);
-      window.OBI_UI.setStatus(`Resolving address "${address}" to inscription...`);
-    }
-    
-    const response = await fetch(url);
-    if (!response.ok) {
-      return null;
-    }
-    const text = await response.text();
-    // Entries are (address,ID,T/F), separated by commas
-    const entries = text.match(/\([^\)]+\)/g) || [];
-    for (const entry of entries) {
-      const [entryAddress, inscriptionId, isBitmapFlag] = entry.slice(1, -1).split(',');
-      if (entryAddress && inscriptionId && entryAddress.trim() === address) {
-        const isBitmap = (isBitmapFlag && isBitmapFlag.trim().toUpperCase() === 'T');
-        return { inscriptionId: inscriptionId.trim(), isBitmap };
-      }
-    }
-    return null;
-  } catch (e) {
-    return null;
-  }
+    chrome.runtime.sendMessage({
+      type: 'OBI_LOG',
+      message: `[OBI Redirect] Redirecting user to: ${site}`
+    });
+  } catch (e) {}
+  return site;
 }
 
-// Process the redirect
 (async () => {
-  // FIRST: Check for infinite loops and block if detected
   if (checkRedirectLoop()) {
-    return; // Stop execution if loop detected
+    return;
   }
-  
   if (window.OBI_UI) {
     window.OBI_UI.setStep(1);
     window.OBI_UI.setStatus('Parsing query parameters...');
   }
-  
   const params = new URLSearchParams(window.location.search);
   let query = params.get('query');
   if (!query) {
-    if (window.OBI_UI) {
-      window.OBI_UI.showError('No query parameter found in URL');
-      setTimeout(() => {
-        window.location.href = chrome.runtime.getURL(`error.html?query=unknown`);
-      }, 200);
-    } else {
-      window.location.href = chrome.runtime.getURL(`error.html?query=unknown`);
-    }
+    window.location.href = chrome.runtime.getURL(`error.html?query=`);
     return;
   }
-  
-  // Remove the first occurrence of .bitmap (case-insensitive) and everything after it
   query = query.replace(/\.bitmap.*$/i, '');
   if (!query) {
-    if (window.OBI_UI) {
-      window.OBI_UI.showError('Invalid query - no content before .bitmap');
-      setTimeout(() => {
-        window.location.href = chrome.runtime.getURL(`error.html?query=unknown`);
-      }, 200);
-    } else {
-      window.location.href = chrome.runtime.getURL(`error.html?query=unknown`);
-    }
+    window.location.href = chrome.runtime.getURL(`error.html?query=`);
     return;
   }
-  
+  // Cache the query for retry
+  sessionStorage.setItem('obi_last_query', query);
   const sanitizedQuery = sanitizeQuery(query);
   let address = null;
-  
+  let failType = '';
   if (isAddress(sanitizedQuery)) {
     if (window.OBI_UI) {
       window.OBI_UI.setStatus(`Processing address: ${sanitizedQuery}`);
     }
     address = sanitizedQuery;
+    failType = 'address';
   } else {
     if (window.OBI_UI) {
       window.OBI_UI.setStatus(`Resolving name: ${sanitizedQuery}`);
@@ -181,61 +116,36 @@ async function fetchInscriptionIdForAddress(address) {
     if (!address) {
       if (window.OBI_UI) {
         window.OBI_UI.showError(`Name "${sanitizedQuery}" not found in registry`);
-        setTimeout(() => {
-          window.location.href = chrome.runtime.getURL(`error.html?query=${encodeURIComponent(sanitizedQuery)}&type=name`);
-        }, 200);
-      } else {
-        window.location.href = chrome.runtime.getURL(`error.html?query=${encodeURIComponent(sanitizedQuery)}&type=name`);
       }
+      window.location.href = chrome.runtime.getURL(`error.html?query=${encodeURIComponent(query)}&type=name`);
       return;
     }
+    failType = 'address'; // If name resolves, next fail is address
   }
-  
-  const result = await fetchInscriptionIdForAddress(address);
-  if (result && result.inscriptionId) {
-    if (window.OBI_UI) {
-      window.OBI_UI.setStep(4);
-      window.OBI_UI.setStatus(`Redirecting to inscription ${result.inscriptionId.slice(0, 8)}...`);
-    }
-    
-    // FLOW: For ALL content types
-    console.log('[OBI Redirect] Found inscription:', result.inscriptionId, 'isBitmap:', result.isBitmap);
-    
-    // For NON-BITMAP content: Open local.html tab (which will auto-close after creating content tab)
-    if (!result.isBitmap) {
-      console.log('[OBI Redirect] Non-bitmap content - opening local.html tab');
-      openLocalContentTab(result.inscriptionId);
-      
-      // Reduced delay to ensure tab opens before redirect
-      setTimeout(() => {
-        // Same tab: Always redirect to inscription page for ALL content
-        window.location.href = `https://ordinals.com/inscription/${result.inscriptionId}`;
-      }, window.OBI_UI ? 150 : 100);
-    } else {
-      // For BITMAP content: Fast redirect - minimal delay
-      console.log('[OBI Redirect] True bitmap content - fast redirecting to inscription page');
-      
-      if (window.OBI_UI) {
-        // Show fast completion for bitmap content
-        window.OBI_UI.setStatus('True bitmap - redirecting immediately...');
-        // Very minimal delay to show the status update, then immediate redirect
-        setTimeout(() => {
-          window.location.href = `https://ordinals.com/inscription/${result.inscriptionId}`;
-        }, 50);
-      } else {
-        // No UI - immediate redirect
-        window.location.href = `https://ordinals.com/inscription/${result.inscriptionId}`;
+  let result = null;
+  let fetchTimedOut = false;
+  // Always use OCI for address-to-inscriptionId
+  await Promise.race([
+    (async () => {
+      try {
+        const ociModule = await import(chrome.runtime.getURL('oci.js'));
+        result = await ociModule.getBitmapInscriptionAndType(address);
+      } catch (e) {
+        console.error('[OBI Redirect] OCI lookup failed:', e);
+        result = null;
       }
-    }
-  } else {
-    if (window.OBI_UI) {
-      window.OBI_UI.showError(`Address "${address}" not found in inscription registry`);
-      setTimeout(() => {
-        window.location.href = chrome.runtime.getURL(`error.html?query=${encodeURIComponent(address)}&type=address`);
-      }, 200);
-    } else {
-      window.location.href = chrome.runtime.getURL(`error.html?query=${encodeURIComponent(address)}&type=address`);
-    }
+    })(),
+    new Promise(resolve => setTimeout(() => { fetchTimedOut = true; resolve(); }, 3000))
+  ]);
+  if (fetchTimedOut || !result || !result.inscriptionId) {
+    window.location.href = chrome.runtime.getURL(`error.html?query=${encodeURIComponent(query)}&type=${failType}`);
     return;
+  }
+  if (result.isBitmap) {
+    window.location.href = `https://ordinals.com/inscription/${result.inscriptionId}`;
+  } else {
+    // Use round robin for actual redirect sites
+    const site = getNextRedirectSite();
+    window.location.href = `${site}${result.inscriptionId}`;
   }
 })();
