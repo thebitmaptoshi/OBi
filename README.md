@@ -1,4 +1,4 @@
-Open Bitmap Internet (OBI) Extension v1.2
+Open Bitmap Internet (OBI) Extension v1.1
 Overview
 This Chrome extension enables seamless resolution and redirection of .bitmap numeric addresses to their corresponding Ordinals inscriptions or content, using a round-robin approach across multiple public Ordinals explorers.
 Features
