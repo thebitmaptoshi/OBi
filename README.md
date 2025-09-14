@@ -33,7 +33,7 @@ Files
 Installation
 1.	Go to chrome://extensions in your browser.
 2.	Enable "Developer mode".
-3.	Click "Load unpacked" and select the v1.2/ directory.
+3.	Click "Load unpacked" and select the v1.1/ directory.
 4.	Use the extension by navigating to any .bitmap name or numeric address in your browser.
 Notes
 •	No API keys, tokens, or personal information are required or stored.
