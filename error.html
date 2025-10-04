@@ -3,6 +3,8 @@
 <head>
     <title>Bitmap Redirect Error</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Preload the GIF so it starts downloading immediately -->
+    <link rel="preload" href="https://memedepot.com/cdn-cgi/imagedelivery/naCPMwxXX46-hrE49eZovw/4394fcf0-dd82-4ab8-a30e-30e928eabb00/public" as="image">
     <style>
         * {
             margin: 0;
@@ -15,7 +17,6 @@
             background: linear-gradient(135deg, #ffa550 0%, #c97a2b 100%);
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
             color: #3a2a13;
@@ -23,14 +24,14 @@
 
         .container {
             text-align: center;
-            padding: 2.5rem 2rem;
+            padding: 2rem 1.5rem;
             background: rgba(255, 255, 255, 0.13);
             border-radius: 18px;
             backdrop-filter: blur(8px);
             border: 1.5px solid rgba(255, 255, 255, 0.18);
             box-shadow: 0 8px 32px rgba(60, 40, 10, 0.13);
-            max-width: 480px;
-            width: 95%;
+            max-width: 420px;
+            width: 90%;
             margin: 0;
         }
 
@@ -47,6 +48,19 @@
             margin-bottom: 1.5rem;
         }
 
+        .query {
+            font-family: 'Courier New', monospace;
+            background: #fff7ed;
+            color: #b71c1c;
+            padding: 0.25em .5em;
+            border-radius: 6px;
+            display: inline-block;
+            margin: 1rem 0 1.5rem 0;
+            font-size: 23px;
+            border: 1px solid #f8bbbc;
+            font-weight: bold;
+        }
+
         a {
             color: #1a73e8;
             text-decoration: none;
@@ -58,7 +72,7 @@
             }
 
         .bitmap-gif {
-            margin-top: 32px;
+            margin-bottom: 2rem;
             max-width: 320px;
             width: 100%;
             border-radius: 10px;
@@ -67,30 +81,19 @@
             margin-left: auto;
             margin-right: auto;
         }
-
-        .center-vertical {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            width: 100vw;
-        }
     </style>
 </head>
 <body>
-    <div class="center-vertical">
-        <div class="container">
-            <div class="not-found" id="not-found-msg"></div>
-            <h1 id="error-title">Error: Not found</h1>
-            <div class="query" id="query-block" style="display:none;"></div>
-            <p class="explanation" id="error-message">The name or address you entered could not be found in the registry or on-chain index.</p>
-            <p id="extra-message">If you are trying to register a new name, please check mempool or wait for the registry to update to the latest block.</p>
-            <p id="address-extra-message" style="display:none;">This extension is currently only tracking the first 907k bitmaps. Please wait for further updates if your address is higher.</p>
-            <a href="https://ordinals.com/" target="_blank">Go to ordinals.com</a>
-        </div>
-        <img class="bitmap-gif" src="https://memedepot.com/cdn-cgi/imagedelivery/naCPMwxXX46-hrE49eZovw/4394fcf0-dd82-4ab8-a30e-30e928eabb00/public" alt="Bitmap Meme GIF" />
-    </div>
+  <div class="container">
+    <img id="bitmap-gif" class="bitmap-gif" src="https://memedepot.com/cdn-cgi/imagedelivery/naCPMwxXX46-hrE49eZovw/4394fcf0-dd82-4ab8-a30e-30e928eabb00/public" alt="Bitmap Meme GIF" />
+    <div class="not-found" id="not-found-msg"></div>
+    <h1 id="error-title">Error: Not found</h1>
+    <div class="query" id="query-block" style="display:none;"></div>
+    <p class="explanation" id="error-message">The name or address you entered could not be found in the registry or on-chain index.</p>
+    <p id="extra-message">If you are trying to register a new name, please check mempool or wait for the registry to update to the latest block.</p>
+    <p id="address-extra-message" style="display:none;">This extension is currently only tracking the first 907k bitmaps. Please wait for further updates if your address is higher.</p>
+    <a href="https://ordinals.com/" target="_blank">Go to ordinals.com</a>
+  </div>
         <script src="error.js"></script>
 </body>
 </html>
