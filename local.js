@@ -180,7 +180,7 @@ function renderContentDirectly(content, contentType) {
     return;
   }
   
-  // CRITICAL FIX: Handle text/plain content properly
+  // Handle text/plain content properly
   if (contentType && contentType.includes('text/plain')) {
     console.log('[OBI Local] Plain text content detected, creating formatted text display');
     
@@ -303,7 +303,7 @@ function processContent(content, contentType) {
     .replace(/url\('\/content\//g, "url('https://ordinals.com/content/")
     .replace(/url\("\/content\//g, 'url("https://ordinals.com/content/');
 
-  // Fix ES6 import maps - this is critical for bop.bitmap
+  // Fix ES6 import maps 
   // Replace relative URLs in import maps with absolute URLs
   fixedContent = fixedContent.replace(
     /"\/content\/([a-f0-9]+i\d+)"/g, 
@@ -372,7 +372,7 @@ async function loadInscriptionContent(inscriptionId) {
         contentType = response.headers['content-type'];
       }
       
-      // CRITICAL FIX: Detect actual content type by analyzing the content
+      // Detect actual content type by analyzing the content
       // The ordinals.com server often returns incorrect content-type headers
       const detectedContentType = detectActualContentType(content, contentType);
       if (detectedContentType !== contentType) {
@@ -401,7 +401,7 @@ async function loadInscriptionContent(inscriptionId) {
   }
 }
 
-// NEW FUNCTION: Detect actual content type by analyzing the content
+// Detect actual content type by analyzing the content
 function detectActualContentType(content, serverContentType) {
   // Handle empty or very small content
   if (!content || content.length < 10) {
@@ -493,7 +493,6 @@ function detectActualContentType(content, serverContentType) {
     return 'text/plain';
   }
   
-  // For "Atlas Code" specifically - if it starts with a comment and has no HTML tags, it's likely plain text
   if (trimmedContent.startsWith('<!--') && !trimmedContent.includes('<html') && 
       !trimmedContent.includes('<head') && !trimmedContent.includes('<body')) {
     return 'text/plain';
@@ -501,4 +500,5 @@ function detectActualContentType(content, serverContentType) {
   
   // Default to server-provided content type
   return serverContentType;
+
 }
