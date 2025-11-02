@@ -1,4 +1,4 @@
-Open Bitmap Internet (OBI) Extension v1.1
+Open Bitmap Internet (OBI) Extension v1.2
 
 Overview
 
@@ -63,7 +63,7 @@ Installation
 
  2.	Enable "Developer mode".
 
- 3.	Click "Load unpacked" and select the v1.1/ directory.
+ 3.	Click "Load unpacked" and select the v1.2/ directory.
 
  4.	Use the extension by navigating to any .bitmap name or numeric address in your browser.
 
