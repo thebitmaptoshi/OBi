@@ -131,7 +131,22 @@ export async function getBitmapSatsRange(start, end) {
 
 // Returns { inscriptionId, isBitmap } for a given bitmap number (address)
 export async function getBitmapInscriptionAndType(address) {
-    const bitmapNumber = parseInt(address, 10);
+    let bitmapNumber, parcelNumber = null;
+    
+    // Handle dotted addresses: parcel.bitmap format
+    if (address.includes('.')) {
+        const parts = address.split('.');
+        if (parts.length === 2) {
+            parcelNumber = parseInt(parts[0], 10);
+            bitmapNumber = parseInt(parts[1], 10);
+        } else {
+            return null; // Invalid format
+        }
+    } else {
+        // Single number - just a bitmap number
+        bitmapNumber = parseInt(address, 10);
+    }
+    
     if (isNaN(bitmapNumber) || bitmapNumber < 0 || bitmapNumber > 906999) {
         return null;
     }
@@ -140,6 +155,15 @@ export async function getBitmapInscriptionAndType(address) {
         return null;
     }
     const origin = (typeof originParam === 'string' && originParam.length > 0) ? originParam : 'https://ordinals.com';
+    
+    // Determine which inscription index to use
+    if (parcelNumber !== null) {
+        // TODO: Parcels are not yet supported - need on-chain parcel index
+        // When parcel support is added, uncomment below and add parcel searching functions here
+        // atIndex = await getParcelInscriptionIndex(bitmapNumber, parcelNumber);
+        return null; // Return null for now since parcels aren't supported
+    }
+    
     const atIndex = getBitmapSatIndex(bitmapNumber);
     const idResp0 = await fetch(origin + '/r/sat/' + sat + '/at/0').then(r => r.json());
     const idResp1 = await fetch(origin + '/r/sat/' + sat + '/at/-1').then(r => r.json());

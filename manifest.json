@@ -1,11 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Open Bitmap internet",
-  "version": "1.1",
+  "version": "1.2",
   "description": "Redirects .bitmap URLs to the most recent inscription content of the 1st 907k bitmaps.",
   "permissions": [
-    "activeTab",
-    "scripting",
     "declarativeNetRequest",
     "declarativeNetRequestFeedback",
     "webNavigation"
@@ -47,9 +45,7 @@
         "local.html",
         "local.js",
         "sandbox.html",
-        "oci.js",
-        "fail.html",
-        "fail.js"
+        "oci.js"
       ],
       "matches": ["<all_urls>", "https://ordinals.com/*"]
     }

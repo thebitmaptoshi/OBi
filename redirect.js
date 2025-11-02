@@ -19,10 +19,10 @@ function sanitizeQuery(query) {
 }
 
 function isAddress(query) {
-  return /^\d+(\.\d+)?$/.test(query);
+  return /^[0-9]+(\.[0-9]+)*$/.test(query);
 }
 
-// Name-to-address lookup (BNS registry)
+// Name-to-address lookup (BNS registry) - JSON format
 async function fetchAddressForName(name) {
   const REGISTRY_BASE_URL = 'https://raw.githubusercontent.com/thebitmaptoshi/BNS/main/Registry/';
   const firstChar = name[0].toUpperCase();
@@ -38,20 +38,53 @@ async function fetchAddressForName(name) {
       return null;
     }
     const text = await response.text();
-    const entries = text.match(/\([^\)]+\)/g) || [];
+    
     const sanitizedInput = sanitizeQuery(name);
-    for (const entry of entries) {
-      const [entryName, entryAddress] = entry.slice(1, -1).split(',');
-      const sanitizedEntryName = sanitizeQuery(entryName ? entryName.trim() : '');
-      if (
-        entryName &&
-        entryAddress &&
-        sanitizedEntryName === sanitizedInput
-      ) {
-        return entryAddress.trim();
+    
+    try {
+      // Parse as JSON
+      const jsonData = JSON.parse(text);
+      
+      if (Array.isArray(jsonData)) {
+        // Handle array format: [{"name": "example", "block": "12345"}, ...]
+        for (const entry of jsonData) {
+          if (entry.name && entry.block) {
+            const sanitizedEntryName = sanitizeQuery(entry.name.trim());
+            if (sanitizedEntryName === sanitizedInput) {
+              return entry.block.trim();
+            }
+          }
+        }
+      } else if (typeof jsonData === 'object') {
+        // Handle object format: {"example": "12345", "test": "67890", ...}
+        for (const [entryName, entryBlock] of Object.entries(jsonData)) {
+          const sanitizedEntryName = sanitizeQuery(entryName.trim());
+          if (sanitizedEntryName === sanitizedInput) {
+            return String(entryBlock).trim();
+          }
+        }
       }
+      
+      return null; // JSON parsed but no match found
+      
+    } catch (jsonError) {
+      // JSON parsing failed, fall back to tuple format for compatibility
+      console.log('JSON parsing failed, trying tuple format:', jsonError.message);
+      
+      const entries = text.match(/\([^\)]+\)/g) || [];
+      for (const entry of entries) {
+        const [entryName, entryAddress] = entry.slice(1, -1).split(',');
+        const sanitizedEntryName = sanitizeQuery(entryName ? entryName.trim() : '');
+        if (
+          entryName &&
+          entryAddress &&
+          sanitizedEntryName === sanitizedInput
+        ) {
+          return entryAddress.trim();
+        }
+      }
+      return null;
     }
-    return null;
   } catch (e) {
     return null;
   }
@@ -97,11 +130,19 @@ function getNextRedirectSite() {
     window.location.href = chrome.runtime.getURL(`error.html?query=`);
     return;
   }
+  
+  // Validate query contains only approved characters before processing
+  if (!/^[a-zA-Z0-9.\-_=!]+$/.test(query)) {
+    window.location.href = chrome.runtime.getURL(`error.html?query=${encodeURIComponent(query)}&type=invalid`);
+    return;
+  }
+  
   // Cache the query for retry
   sessionStorage.setItem('obi_last_query', query);
   const sanitizedQuery = sanitizeQuery(query);
   let address = null;
   let failType = '';
+  
   if (isAddress(sanitizedQuery)) {
     if (window.OBI_UI) {
       window.OBI_UI.setStatus(`Processing address: ${sanitizedQuery}`);

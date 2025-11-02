@@ -13,6 +13,11 @@ window.addEventListener('DOMContentLoaded', function() {
     document.getElementById('error-message').innerHTML = 'The <b>name</b> you entered could not be found in the BNS registry.<br>Please check your spelling or try again later.';
     document.getElementById('extra-message').style.display = '';
     document.getElementById('address-extra-message').style.display = 'none';
+  } else if (type === 'invalid') {
+    document.getElementById('error-title').textContent = 'Error: Invalid input';
+    document.getElementById('error-message').innerHTML = 'Unable to process the .bitmap request. Input contains invalid characters. Only letters, numbers, periods, dashes, underscores, equals signs, and exclamation marks are allowed.';
+    document.getElementById('extra-message').style.display = 'none';
+    document.getElementById('address-extra-message').style.display = 'none';
   } else if (type === 'address') {
     document.getElementById('error-title').textContent = 'Error: Address not found';
     document.getElementById('error-message').innerHTML = 'The <b>address</b> you entered could not be found in the on-chain index (OCI).';
